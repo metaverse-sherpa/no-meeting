@@ -1,13 +1,12 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Coins, Menu, X, LogOut } from 'lucide-react';
+import { Coins, Menu, X } from 'lucide-react';
 import { useApp } from '../lib/context';
-import { signOut } from '../lib/auth';
 
 export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { profile, reviewRequests } = useApp();
+  const { profile, profiles, reviewRequests, switchUser } = useApp();
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -98,19 +97,24 @@ export function Layout() {
           </div>
         )}
 
-        <span style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>{profile.full_name}</span>
-
-        <button
-          onClick={() => signOut()}
-          title="Sign out"
+        {/* User switcher */}
+        <select
+          value={profile.id}
+          onChange={(e) => switchUser(e.target.value)}
           style={{
-            background: 'none', border: 'none', padding: 4,
-            color: 'var(--color-neutral-400)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center',
+            fontSize: 11,
+            border: '1px solid var(--color-neutral-200)',
+            borderRadius: 4,
+            padding: '2px 4px',
+            color: 'var(--color-neutral-600)',
+            background: 'white',
+            cursor: 'pointer',
           }}
         >
-          <LogOut size={14} />
-        </button>
+          {profiles.map((p) => (
+            <option key={p.id} value={p.id}>{p.full_name}</option>
+          ))}
+        </select>
 
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

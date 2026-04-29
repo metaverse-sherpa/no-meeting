@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './lib/context';
 import { Layout } from './components/Layout';
-import { Login } from './pages/Login';
+import { MockLogin } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { NewRequest } from './pages/NewRequest';
 import { RequestDetail } from './pages/RequestDetail';
@@ -11,7 +11,7 @@ import { Analytics } from './pages/Analytics';
 import { MeetingInterrupt } from './pages/MeetingInterrupt';
 
 function AppRoutes() {
-  const { session, loading } = useApp();
+  const { currentUserId, loading } = useApp();
 
   if (loading) {
     return (
@@ -24,8 +24,8 @@ function AppRoutes() {
     );
   }
 
-  if (!session) {
-    return <Login />;
+  if (!currentUserId) {
+    return <MockLogin />;
   }
 
   return (

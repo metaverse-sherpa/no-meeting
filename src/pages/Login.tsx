@@ -1,34 +1,20 @@
-import { useState } from 'react';
 import { Coins } from 'lucide-react';
-import { signIn, signUp } from '../lib/auth';
-import type { UserRole } from '../types';
+import { useApp } from '../lib/context';
 
-export function Login() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [title, setTitle] = useState('');
-  const [role, setRole] = useState<UserRole>('requester');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+const ROLE_LABEL: Record<string, string> = {
+  requester: 'Requester',
+  reviewer: 'Reviewer',
+  both: 'Requester & Reviewer',
+};
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      if (mode === 'signin') {
-        await signIn(email, password);
-      } else {
-        await signUp(email, password, fullName, role, title);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  };
+const ROLE_COLOR: Record<string, { bg: string; color: string }> = {
+  requester: { bg: 'var(--color-primary-50)', color: 'var(--color-primary-700)' },
+  reviewer:  { bg: 'var(--color-success-50)', color: 'var(--color-success-700)' },
+  both:      { bg: 'var(--color-accent-50)',  color: 'var(--color-accent-600)' },
+};
+
+export function MockLogin() {
+  const { profiles, switchUser } = useApp();
 
   return (
     <div style={{
@@ -39,9 +25,8 @@ export function Login() {
       justifyContent: 'center',
       padding: 24,
     }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 32 }}>
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 8 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
             background: 'var(--color-primary-600)',
@@ -52,158 +37,73 @@ export function Login() {
           <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)' }}>TokenFlow</span>
         </div>
 
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-neutral-500)', marginBottom: 28 }}>
+          Replace synchronous meetings with async decisions
+        </p>
+
         <div style={{
           background: 'white',
           border: '1px solid var(--color-neutral-200)',
           borderRadius: 'var(--radius-lg)',
-          padding: 28,
+          padding: 24,
           boxShadow: 'var(--shadow-sm)',
         }}>
-          <h1 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4, color: 'var(--color-neutral-900)' }}>
-            {mode === 'signin' ? 'Sign in' : 'Create account'}
-          </h1>
-          <p style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginBottom: 20 }}>
-            {mode === 'signin' ? 'Welcome back to TokenFlow' : 'Replace meetings with async decisions'}
-          </p>
+          <h2 style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-neutral-700)', marginBottom: 16 }}>
+            Continue as
+          </h2>
 
-          <form onSubmit={handleSubmit}>
-            {mode === 'signup' && (
-              <>
-                <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Full name</label>
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    placeholder="Alex Chen"
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Job title</label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Product Manager"
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={{ marginBottom: 14 }}>
-                  <label style={labelStyle}>Role</label>
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    {(['requester', 'reviewer', 'both'] as UserRole[]).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        style={{
-                          flex: 1,
-                          padding: '6px 0',
-                          border: '1px solid',
-                          borderColor: role === r ? 'var(--color-primary-300)' : 'var(--color-neutral-200)',
-                          borderRadius: 6,
-                          background: role === r ? 'var(--color-primary-50)' : 'white',
-                          color: role === r ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
-                          fontSize: 12,
-                          fontWeight: role === r ? 500 : 400,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {r === 'both' ? 'Both' : r.charAt(0).toUpperCase() + r.slice(1)}
-                      </button>
-                    ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {profiles.map((p) => {
+              const roleStyle = ROLE_COLOR[p.role] ?? ROLE_COLOR.requester;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => switchUser(p.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 14px',
+                    background: 'white',
+                    border: '1px solid var(--color-neutral-200)',
+                    borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'border-color 0.15s, background 0.15s',
+                    width: '100%',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary-300)';
+                    e.currentTarget.style.background = 'var(--color-primary-50)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-neutral-200)';
+                    e.currentTarget.style.background = 'white';
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: 'var(--color-neutral-100)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 600, color: 'var(--color-neutral-600)',
+                    flexShrink: 0,
+                  }}>
+                    {p.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                   </div>
-                  <p style={{ fontSize: 11, color: 'var(--color-neutral-400)', marginTop: 4 }}>
-                    {role === 'requester' && 'You submit requests and spend tokens'}
-                    {role === 'reviewer' && 'You review requests from others'}
-                    {role === 'both' && 'You can both submit and review requests'}
-                  </p>
-                </div>
-              </>
-            )}
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle}>Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="you@company.com"
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                minLength={6}
-                style={inputStyle}
-              />
-            </div>
-
-            {error && (
-              <div style={{
-                padding: '8px 12px',
-                background: 'var(--color-error-50)',
-                color: 'var(--color-error-600)',
-                borderRadius: 6,
-                fontSize: 12,
-                marginBottom: 14,
-              }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '9px 16px',
-                background: loading ? 'var(--color-neutral-300)' : 'var(--color-primary-600)',
-                color: 'white',
-                border: 'none',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: loading ? 'default' : 'pointer',
-                transition: 'background 0.15s',
-              }}
-            >
-              {loading ? 'Please wait...' : mode === 'signin' ? 'Sign in' : 'Create account'}
-            </button>
-          </form>
-
-          <div style={{ marginTop: 16, textAlign: 'center', fontSize: 12, color: 'var(--color-neutral-500)' }}>
-            {mode === 'signin' ? (
-              <>
-                No account?{' '}
-                <button
-                  onClick={() => { setMode('signup'); setError(''); }}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-primary-600)', cursor: 'pointer', fontWeight: 500, fontSize: 12 }}
-                >
-                  Sign up
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-neutral-900)' }}>{p.full_name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--color-neutral-400)' }}>{p.title}</div>
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontWeight: 500, padding: '2px 8px',
+                    borderRadius: 20, flexShrink: 0,
+                    background: roleStyle.bg, color: roleStyle.color,
+                  }}>
+                    {ROLE_LABEL[p.role]}
+                  </span>
                 </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{' '}
-                <button
-                  onClick={() => { setMode('signin'); setError(''); }}
-                  style={{ background: 'none', border: 'none', color: 'var(--color-primary-600)', cursor: 'pointer', fontWeight: 500, fontSize: 12 }}
-                >
-                  Sign in
-                </button>
-              </>
-            )}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -211,21 +111,5 @@ export function Login() {
   );
 }
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 12,
-  fontWeight: 500,
-  color: 'var(--color-neutral-600)',
-  marginBottom: 4,
-};
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
-  border: '1px solid var(--color-neutral-200)',
-  borderRadius: 6,
-  fontSize: 13,
-  color: 'var(--color-neutral-800)',
-  background: 'white',
-  outline: 'none',
-};
+export { MockLogin }
