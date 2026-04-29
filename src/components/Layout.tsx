@@ -1,7 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useState } from 'react';
 import { Menu, X, LogOut, LayoutDashboard, Inbox, Zap, ChartBar as BarChart2, Settings, Coins } from 'lucide-react';
-import { BtmLogo } from './BtmLogo';
+import { Calendar } from 'lucide-react';
 import { useApp } from '../lib/context';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -75,9 +75,9 @@ export function Layout() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}>
-            <BtmLogo size={14} color="white" />
+            <Calendar size={13} color="white" />
           </div>
-          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-neutral-900)' }}>BTM</span>
+          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-neutral-900)' }}>CRUX</span>
           <span style={{ fontSize: 11, color: 'var(--color-neutral-400)', fontWeight: 400 }}>get productive</span>
         </div>
 

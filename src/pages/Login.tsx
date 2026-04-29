@@ -1,4 +1,4 @@
-import { BtmLogo } from '../components/BtmLogo';
+import { Calendar } from 'lucide-react';
 import { useApp } from '../lib/context';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -32,9 +32,9 @@ export function MockLogin() {
             background: 'var(--color-primary-600)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <BtmLogo size={20} color="white" />
+            <Calendar size={18} color="white" />
           </div>
-          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)' }}>BTM</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)' }}>CRUX</span>
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-neutral-500)', marginBottom: 28 }}>

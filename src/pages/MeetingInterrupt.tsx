@@ -159,7 +159,7 @@ export function MeetingInterrupt() {
             }}
           >
             If your meeting is about getting a decision, you can probably do it async.
-            BTM lets you spend a token to get an async response instead.
+            CRUX lets you spend a token to get an async response instead.
           </div>
         </div>
       </div>
