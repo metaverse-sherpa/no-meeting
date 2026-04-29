@@ -1,4 +1,4 @@
-import { Coins } from 'lucide-react';
+import { BtmLogo } from '../components/BtmLogo';
 import { useApp } from '../lib/context';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -32,7 +32,7 @@ export function MockLogin() {
             background: 'var(--color-primary-600)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Coins size={18} color="white" />
+            <BtmLogo size={20} color="white" />
           </div>
           <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)' }}>BTM</span>
         </div>

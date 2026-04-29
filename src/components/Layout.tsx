@@ -1,6 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useState } from 'react';
-import { Coins, Menu, X, LogOut, LayoutDashboard, Inbox, Zap, ChartBar as BarChart2, Settings } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Inbox, Zap, ChartBar as BarChart2, Settings, Coins } from 'lucide-react';
+import { BtmLogo } from './BtmLogo';
 import { useApp } from '../lib/context';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -68,7 +69,14 @@ export function Layout() {
 
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Coins size={15} style={{ color: 'var(--color-primary-600)' }} />
+          <div style={{
+            width: 22, height: 22, borderRadius: 6,
+            background: 'var(--color-primary-600)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <BtmLogo size={14} color="white" />
+          </div>
           <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-neutral-900)' }}>BTM</span>
           <span style={{ fontSize: 11, color: 'var(--color-neutral-400)', fontWeight: 400 }}>get productive</span>
         </div>
