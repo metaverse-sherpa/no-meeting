@@ -110,6 +110,3 @@ export function MockLogin() {
     </div>
   );
 }
-
-
-export { MockLogin }
