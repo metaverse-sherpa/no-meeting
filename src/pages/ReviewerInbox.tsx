@@ -1,29 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import {
-  getCurrentUser,
-  subscribe,
-  getRequestsForReviewer,
-  getExpertiseArea,
-} from '../lib/store';
+import { useApp } from '../lib/context';
 import { StatusBadge, DecisionTypeBadge } from '../components/StatusBadge';
 import type { RequestStatus } from '../types';
 
 export function ReviewerInbox() {
-  const [, setRerender] = useState(0);
   const [filter, setFilter] = useState<RequestStatus | 'all'>('all');
   const navigate = useNavigate();
+  const { reviewRequests, getExpertiseArea } = useApp();
 
-  useEffect(() => {
-    const unsub = subscribe(() => setRerender((n) => n + 1));
-    return unsub;
-  }, []);
-
-  const user = getCurrentUser();
-  const allRequests = getRequestsForReviewer(user.id);
-  const filteredRequests = filter === 'all' ? allRequests : allRequests.filter((r) => r.status === filter);
-  const pending = allRequests.filter((r) => r.status === 'pending').length;
+  const filteredRequests = filter === 'all' ? reviewRequests : reviewRequests.filter((r) => r.status === filter);
+  const pending = reviewRequests.filter((r) => r.status === 'pending').length;
 
   return (
     <div>
@@ -38,25 +26,21 @@ export function ReviewerInbox() {
         </h1>
       </div>
 
-      {/* Filter pills */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
         {(['all', 'pending', 'in_review', 'needs_info', 'approved', 'rejected'] as const).map((f) => {
-          const count = f === 'all' ? allRequests.length : allRequests.filter((r) => r.status === f).length;
+          const count = f === 'all' ? reviewRequests.length : reviewRequests.filter((r) => r.status === f).length;
           if (count === 0 && f !== 'all') return null;
           return (
             <button
               key={f}
               onClick={() => setFilter(f)}
               style={{
-                padding: '3px 10px',
-                border: '1px solid',
+                padding: '3px 10px', border: '1px solid',
                 borderColor: filter === f ? 'var(--color-primary-300)' : 'var(--color-neutral-200)',
                 borderRadius: 12,
                 background: filter === f ? 'var(--color-primary-50)' : 'white',
                 color: filter === f ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
-                fontSize: 11,
-                fontWeight: filter === f ? 500 : 400,
-                cursor: 'pointer',
+                fontSize: 11, fontWeight: filter === f ? 500 : 400, cursor: 'pointer',
               }}
             >
               {f === 'all' ? 'All' : f.replace('_', ' ')} ({count})

@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import type { DecisionRequest } from '../types';
-import { getProfile, getExpertiseArea } from '../lib/store';
+import { useApp } from '../lib/context';
 import { StatusBadge, DecisionTypeBadge } from './StatusBadge';
 
 export function RequestCard({ request }: { request: DecisionRequest }) {
   const navigate = useNavigate();
+  const { getProfile, getExpertiseArea } = useApp();
   const requester = getProfile(request.requester_id);
   const expertise = getExpertiseArea(request.expertise_area_id);
 

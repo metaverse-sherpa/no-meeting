@@ -1,27 +1,13 @@
-import { useState, useEffect } from 'react';
 import { Calendar, Clock, CircleCheck as CheckCircle, Coins } from 'lucide-react';
-import {
-  getCurrentUser,
-  subscribe,
-  getRequestsForRequester,
-  getRequestsForReviewer,
-  getProfile,
-} from '../lib/store';
+import { useApp } from '../lib/context';
 
 export function Analytics() {
-  const [, setRerender] = useState(0);
+  const { profile, myRequests, reviewRequests, getProfile } = useApp();
 
-  useEffect(() => {
-    const unsub = subscribe(() => setRerender((n) => n + 1));
-    return unsub;
-  }, []);
+  if (!profile) return null;
 
-  const user = getCurrentUser();
-  const isRequester = user.role === 'requester' || user.role === 'both';
-  const isReviewer = user.role === 'reviewer' || user.role === 'both';
-
-  const myRequests = getRequestsForRequester(user.id);
-  const reviewRequests = getRequestsForReviewer(user.id);
+  const isRequester = profile.role === 'requester' || profile.role === 'both';
+  const isReviewer = profile.role === 'reviewer' || profile.role === 'both';
 
   const approved = myRequests.filter((r) => r.status === 'approved').length;
   const rejected = myRequests.filter((r) => r.status === 'rejected').length;
@@ -38,7 +24,6 @@ export function Analytics() {
   const reviewApproved = reviewRequests.filter((r) => r.status === 'approved').length;
   const reviewRejected = reviewRequests.filter((r) => r.status === 'rejected').length;
 
-  // Spending by reviewer
   const spending: Record<string, { name: string; count: number }> = {};
   myRequests.forEach((r) => {
     const p = getProfile(r.reviewer_id);
@@ -51,14 +36,13 @@ export function Analytics() {
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 16 }}>Analytics</h1>
 
-      {/* Key numbers */}
       <div style={{ display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>
         {isRequester && (
           <>
             <Metric value={meetingsSaved} label="meetings saved" icon={<Calendar size={13} />} />
             <Metric value={avgHours > 24 ? `${(avgHours / 24).toFixed(1)}d` : `${Math.round(avgHours)}h`} label="avg response" icon={<Clock size={13} />} />
             <Metric value={`${approvalRate}%`} label="approval rate" icon={<CheckCircle size={13} />} />
-            <Metric value={user.tokens_used_this_week} label="tokens used" icon={<Coins size={13} />} />
+            <Metric value={profile.tokens_used_this_week} label="tokens used" icon={<Coins size={13} />} />
           </>
         )}
         {isReviewer && (
@@ -69,7 +53,6 @@ export function Analytics() {
         )}
       </div>
 
-      {/* Spending */}
       {isRequester && Object.keys(spending).length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-neutral-600)', marginBottom: 10 }}>Token spending</h2>
@@ -92,7 +75,6 @@ export function Analytics() {
         </div>
       )}
 
-      {/* Impact */}
       <div style={{ background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-100)', borderRadius: 'var(--radius-md)', padding: 14, fontSize: 12, color: 'var(--color-primary-700)', lineHeight: '160%' }}>
         {isRequester && (
           <p>You've made {myRequests.length} requests and saved ~{meetingsSaved} meeting{meetingsSaved !== 1 ? 's' : ''} by going async.

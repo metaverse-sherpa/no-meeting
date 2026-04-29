@@ -1,59 +1,59 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, X, Coins, Shield } from 'lucide-react';
-import {
-  getCurrentUser,
-  subscribe,
-  getExpertiseForReviewer,
-  addExpertiseArea,
-  removeExpertiseArea,
-  updateProfile,
-} from '../lib/store';
+import { useApp } from '../lib/context';
 import type { UserRole } from '../types';
 
 export function Profile() {
-  const [, setRerender] = useState(0);
+  const { profile, getExpertiseForReviewer, addExpertiseArea, removeExpertiseArea, updateRole } = useApp();
   const [showAddExpertise, setShowAddExpertise] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newCapacity, setNewCapacity] = useState(3);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    const unsub = subscribe(() => setRerender((n) => n + 1));
-    return unsub;
-  }, []);
+  if (!profile) return null;
 
-  const user = getCurrentUser();
-  const isReviewer = user.role === 'reviewer' || user.role === 'both';
-  const expertiseAreas = getExpertiseForReviewer(user.id);
+  const isReviewer = profile.role === 'reviewer' || profile.role === 'both';
+  const expertiseAreas = getExpertiseForReviewer(profile.id);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newName.trim()) return;
-    addExpertiseArea({ reviewer_id: user.id, name: newName.trim(), description: newDesc.trim(), weekly_capacity: newCapacity });
-    setNewName(''); setNewDesc(''); setNewCapacity(3); setShowAddExpertise(false);
+    setSaving(true);
+    try {
+      await addExpertiseArea({ name: newName.trim(), description: newDesc.trim(), weekly_capacity: newCapacity });
+      setNewName(''); setNewDesc(''); setNewCapacity(3); setShowAddExpertise(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRoleChange = async (role: UserRole) => {
+    await updateRole(role);
   };
 
   return (
     <div>
       <h1 style={{ fontSize: 20, marginBottom: 16 }}>Settings</h1>
 
-      {/* Role */}
+      <div style={{ marginBottom: 16 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-neutral-800)', marginBottom: 2 }}>{profile.full_name}</p>
+        {profile.title && <p style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>{profile.title}</p>}
+      </div>
+
       <div style={{ marginBottom: 20 }}>
         <label style={labelStyle}>Role</label>
         <div style={{ display: 'flex', gap: 4 }}>
           {(['requester', 'reviewer', 'both'] as UserRole[]).map((role) => (
             <button
               key={role}
-              onClick={() => updateProfile(user.id, { role })}
+              onClick={() => handleRoleChange(role)}
               style={{
-                padding: '5px 12px',
-                border: '1px solid',
-                borderColor: user.role === role ? 'var(--color-primary-300)' : 'var(--color-neutral-200)',
+                padding: '5px 12px', border: '1px solid',
+                borderColor: profile.role === role ? 'var(--color-primary-300)' : 'var(--color-neutral-200)',
                 borderRadius: 4,
-                background: user.role === role ? 'var(--color-primary-50)' : 'white',
-                color: user.role === role ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
-                fontSize: 12,
-                fontWeight: user.role === role ? 500 : 400,
-                cursor: 'pointer',
+                background: profile.role === role ? 'var(--color-primary-50)' : 'white',
+                color: profile.role === role ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
+                fontSize: 12, fontWeight: profile.role === role ? 500 : 400, cursor: 'pointer',
               }}
             >
               {role === 'both' ? 'Both' : role.charAt(0).toUpperCase() + role.slice(1)}
@@ -62,14 +62,13 @@ export function Profile() {
         </div>
       </div>
 
-      {(user.role === 'requester' || user.role === 'both') && (
+      {(profile.role === 'requester' || profile.role === 'both') && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-primary-700)', background: 'var(--color-primary-50)', padding: '6px 12px', borderRadius: 6, marginBottom: 20 }}>
           <Coins size={13} />
-          {user.token_balance} tokens remaining ({user.tokens_used_this_week} used this week)
+          {profile.token_balance} tokens remaining ({profile.tokens_used_this_week} used this week)
         </div>
       )}
 
-      {/* Expertise areas */}
       {isReviewer && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -95,7 +94,9 @@ export function Profile() {
               </div>
               <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 <button onClick={() => setShowAddExpertise(false)} style={{ padding: '4px 10px', background: 'white', border: '1px solid var(--color-neutral-200)', borderRadius: 4, fontSize: 11, color: 'var(--color-neutral-500)', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleAdd} disabled={!newName.trim()} style={{ padding: '4px 10px', background: newName.trim() ? 'var(--color-primary-600)' : 'var(--color-neutral-200)', color: newName.trim() ? 'white' : 'var(--color-neutral-400)', border: 'none', borderRadius: 4, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>Add</button>
+                <button onClick={handleAdd} disabled={!newName.trim() || saving} style={{ padding: '4px 10px', background: newName.trim() && !saving ? 'var(--color-primary-600)' : 'var(--color-neutral-200)', color: newName.trim() && !saving ? 'white' : 'var(--color-neutral-400)', border: 'none', borderRadius: 4, fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>
+                  {saving ? 'Saving...' : 'Add'}
+                </button>
               </div>
             </div>
           )}
@@ -110,13 +111,9 @@ export function Profile() {
                 <div
                   key={area.id}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '10px 12px',
-                    background: 'var(--color-neutral-50)',
-                    border: '1px solid var(--color-neutral-200)',
-                    borderRadius: 6,
+                    background: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)', borderRadius: 6,
                   }}
                 >
                   <div>
@@ -127,7 +124,12 @@ export function Profile() {
                     <span style={{ fontSize: 11, color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Coins size={10} /> {area.tokens_received_this_week}/{area.weekly_capacity}
                     </span>
-                    <button onClick={() => removeExpertiseArea(area.id)} style={{ background: 'none', border: 'none', padding: 2, color: 'var(--color-neutral-300)', cursor: 'pointer' }} onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-error-500)')} onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-neutral-300)')}>
+                    <button
+                      onClick={() => removeExpertiseArea(area.id)}
+                      style={{ background: 'none', border: 'none', padding: 2, color: 'var(--color-neutral-300)', cursor: 'pointer' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-error-500)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-neutral-300)')}
+                    >
                       <X size={12} />
                     </button>
                   </div>

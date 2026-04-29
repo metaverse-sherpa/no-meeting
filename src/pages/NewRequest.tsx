@@ -1,29 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, Coins, Link, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Calendar } from 'lucide-react';
-import {
-  getCurrentUser,
-  subscribe,
-  getReviewers,
-  getExpertiseForReviewer,
-  createRequest,
-} from '../lib/store';
-import { isNotionUrl, extractNotionPage } from '../lib/notion-extract';
+import { useApp } from '../lib/context';
+import { isNotionUrl } from '../lib/notion-extract';
+import { extractNotionViaEdge } from '../lib/db';
 import { calculateMeetingCost, formatMeetingCost } from '../lib/meeting-calculator';
 import type { DecisionType, RequesterType } from '../types';
 
 type ExtractStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export function NewRequest() {
-  const [, setRerender] = useState(0);
   const navigate = useNavigate();
+  const { profile, getReviewers, getExpertiseForReviewer, createRequest } = useApp();
 
-  useEffect(() => {
-    const unsub = subscribe(() => setRerender((n) => n + 1));
-    return unsub;
-  }, []);
-
-  const user = getCurrentUser();
   const reviewers = getReviewers();
 
   const [notionLink, setNotionLink] = useState('');
@@ -32,7 +21,7 @@ export function NewRequest() {
   const [title, setTitle] = useState('');
   const [decisionType, setDecisionType] = useState<DecisionType>('approval');
   const [requesterType, setRequesterType] = useState<RequesterType>(
-    user.title.toLowerCase().includes('developer') || user.title.toLowerCase().includes('engineer')
+    (profile?.title ?? '').toLowerCase().includes('developer') || (profile?.title ?? '').toLowerCase().includes('engineer')
       ? 'developer'
       : 'pm'
   );
@@ -43,6 +32,7 @@ export function NewRequest() {
   const [deadline, setDeadline] = useState('');
   const [error, setError] = useState('');
   const [showMeetingCheck, setShowMeetingCheck] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const reviewerExpertise = selectedReviewer ? getExpertiseForReviewer(selectedReviewer) : [];
 
@@ -52,17 +42,14 @@ export function NewRequest() {
     selectedExpertise &&
     context.trim() &&
     deadline &&
-    user.token_balance > 0;
+    (profile?.token_balance ?? 0) > 0;
 
   const handleExtractNotion = useCallback(async (url: string) => {
-    if (!isNotionUrl(url)) {
-      setExtractStatus('idle');
-      return;
-    }
+    if (!isNotionUrl(url)) { setExtractStatus('idle'); return; }
     setExtractStatus('loading');
     setExtractError('');
     try {
-      const result = await extractNotionPage(url);
+      const result = await extractNotionViaEdge(url);
       if (result.title) setTitle(result.title);
       if (result.content) setContext(result.content);
       if (result.alternatives) setAlternatives(result.alternatives);
@@ -81,10 +68,11 @@ export function NewRequest() {
     return () => clearTimeout(timer);
   }, [notionLink, handleExtractNotion]);
 
-  const submitRequest = () => {
+  const submitRequest = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
     try {
-      const request = createRequest({
-        requester_id: user.id,
+      const req = await createRequest({
         reviewer_id: selectedReviewer,
         expertise_area_id: selectedExpertise,
         title: title.trim(),
@@ -95,13 +83,16 @@ export function NewRequest() {
         deadline,
         notion_link: notionLink.trim() || undefined,
       });
-      navigate(`/request/${request.id}`);
+      navigate(`/request/${req.id}`);
     } catch {
       setError('Failed to create request. Please try again.');
+      setSubmitting(false);
     }
   };
 
-  if (user.token_balance <= 0) {
+  if (!profile) return null;
+
+  if (profile.token_balance <= 0) {
     return (
       <div>
         <h1 style={{ fontSize: 20, marginBottom: 8 }}>No tokens remaining</h1>
@@ -112,7 +103,6 @@ export function NewRequest() {
     );
   }
 
-  // Meeting cost for inline display
   const complexity = context.length < 200 ? 'simple' : context.length > 500 ? 'complex' : 'moderate';
   const meetingCost = calculateMeetingCost(complexity, 3);
 
@@ -122,7 +112,7 @@ export function NewRequest() {
         <h1 style={{ fontSize: 20 }}>New Request</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--color-primary-700)', background: 'var(--color-primary-50)', padding: '3px 10px', borderRadius: 6 }}>
           <Coins size={12} />
-          {user.token_balance} tokens
+          {profile.token_balance} tokens
         </div>
       </div>
 
@@ -139,8 +129,7 @@ export function NewRequest() {
             onChange={(e) => setNotionLink(e.target.value)}
             placeholder="https://www.notion.so/..."
             style={{
-              ...inputStyle,
-              paddingRight: 36,
+              ...inputStyle, paddingRight: 36,
               borderColor: extractStatus === 'success' ? 'var(--color-success-500)' : extractStatus === 'error' ? 'var(--color-error-500)' : undefined,
             }}
           />
@@ -152,7 +141,7 @@ export function NewRequest() {
         {extractStatus === 'error' && <div style={{ fontSize: 11, color: 'var(--color-error-600)', marginTop: 4 }}>{extractError}</div>}
       </div>
 
-      {/* Requester type - compact toggle */}
+      {/* Requester type */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 4 }}>
           {(['pm', 'developer'] as RequesterType[]).map((type) => (
@@ -161,15 +150,12 @@ export function NewRequest() {
               type="button"
               onClick={() => setRequesterType(type)}
               style={{
-                padding: '5px 12px',
-                border: '1px solid',
+                padding: '5px 12px', border: '1px solid',
                 borderColor: requesterType === type ? 'var(--color-primary-300)' : 'var(--color-neutral-200)',
                 borderRadius: 4,
                 background: requesterType === type ? 'var(--color-primary-50)' : 'white',
                 color: requesterType === type ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
-                fontSize: 12,
-                fontWeight: requesterType === type ? 500 : 400,
-                cursor: 'pointer',
+                fontSize: 12, fontWeight: requesterType === type ? 500 : 400, cursor: 'pointer',
               }}
             >
               {type === 'pm' ? 'PM' : 'Developer'}
@@ -190,7 +176,7 @@ export function NewRequest() {
         />
       </div>
 
-      {/* Decision type - compact pills */}
+      {/* Decision type */}
       <div style={{ marginBottom: 16 }}>
         <label style={labelStyle}>Type</label>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -202,15 +188,12 @@ export function NewRequest() {
               type="button"
               onClick={() => setDecisionType(type)}
               style={{
-                padding: '4px 10px',
-                border: '1px solid',
+                padding: '4px 10px', border: '1px solid',
                 borderColor: decisionType === type ? 'var(--color-primary-300)' : 'var(--color-neutral-200)',
                 borderRadius: 4,
                 background: decisionType === type ? 'var(--color-primary-50)' : 'white',
                 color: decisionType === type ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
-                fontSize: 11,
-                fontWeight: decisionType === type ? 500 : 400,
-                cursor: 'pointer',
+                fontSize: 11, fontWeight: decisionType === type ? 500 : 400, cursor: 'pointer',
               }}
             >
               {label}
@@ -229,7 +212,7 @@ export function NewRequest() {
             style={selectStyle}
           >
             <option value="">Select</option>
-            {reviewers.map((r) => (
+            {reviewers.filter((r) => r.id !== profile.id).map((r) => (
               <option key={r.id} value={r.id}>{r.full_name}</option>
             ))}
           </select>
@@ -298,22 +281,14 @@ export function NewRequest() {
         </div>
       )}
 
-      {/* Inline meeting check - lightweight */}
       {canSubmit && !showMeetingCheck && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            background: 'var(--color-neutral-50)',
-            border: '1px solid var(--color-neutral-200)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 12,
-            fontSize: 12,
-            color: 'var(--color-neutral-500)',
-          }}
-        >
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 14px',
+          background: 'var(--color-neutral-50)', border: '1px solid var(--color-neutral-200)',
+          borderRadius: 'var(--radius-md)', marginBottom: 12,
+          fontSize: 12, color: 'var(--color-neutral-500)',
+        }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Calendar size={13} />
             A meeting for this would cost {formatMeetingCost(meetingCost)}
@@ -329,18 +304,12 @@ export function NewRequest() {
       )}
 
       {showMeetingCheck && (
-        <div
-          style={{
-            padding: '12px 14px',
-            background: 'var(--color-primary-50)',
-            border: '1px solid var(--color-primary-100)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 12,
-            fontSize: 12,
-            color: 'var(--color-primary-700)',
-            lineHeight: '150%',
-          }}
-        >
+        <div style={{
+          padding: '12px 14px',
+          background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-100)',
+          borderRadius: 'var(--radius-md)', marginBottom: 12,
+          fontSize: 12, color: 'var(--color-primary-700)', lineHeight: '150%',
+        }}>
           A {meetingCost.meetingMinutes}m meeting with {meetingCost.attendeeCount} people = {formatMeetingCost(meetingCost)} of focused time (including prep + context switching).
           This async request costs 1 token and {meetingCost.asyncAlternativeMinutes}m of your time. No interruptions for anyone else.
           <button
@@ -353,19 +322,15 @@ export function NewRequest() {
         </div>
       )}
 
-      {/* Submit */}
       <div style={{ display: 'flex', gap: 8 }}>
         <button
           type="button"
           onClick={() => navigate(-1)}
           style={{
-            padding: '8px 16px',
-            background: 'white',
+            padding: '8px 16px', background: 'white',
             border: '1px solid var(--color-neutral-200)',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 12,
-            color: 'var(--color-neutral-500)',
-            cursor: 'pointer',
+            borderRadius: 'var(--radius-md)', fontSize: 12,
+            color: 'var(--color-neutral-500)', cursor: 'pointer',
           }}
         >
           Cancel
@@ -373,24 +338,20 @@ export function NewRequest() {
         <button
           type="button"
           onClick={submitRequest}
-          disabled={!canSubmit}
+          disabled={!canSubmit || submitting}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
+            display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 20px',
-            background: canSubmit ? 'var(--color-primary-600)' : 'var(--color-neutral-200)',
-            color: canSubmit ? 'white' : 'var(--color-neutral-400)',
-            border: 'none',
-            borderRadius: 'var(--radius-md)',
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: canSubmit ? 'pointer' : 'default',
+            background: canSubmit && !submitting ? 'var(--color-primary-600)' : 'var(--color-neutral-200)',
+            color: canSubmit && !submitting ? 'white' : 'var(--color-neutral-400)',
+            border: 'none', borderRadius: 'var(--radius-md)',
+            fontSize: 12, fontWeight: 500,
+            cursor: canSubmit && !submitting ? 'pointer' : 'default',
             transition: 'background 0.15s',
           }}
         >
           <Send size={13} />
-          Send (1 Token)
+          {submitting ? 'Sending...' : 'Send (1 Token)'}
         </button>
       </div>
 
@@ -405,23 +366,16 @@ export function NewRequest() {
 }
 
 const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 12,
-  fontWeight: 500,
-  color: 'var(--color-neutral-600)',
-  marginBottom: 4,
+  display: 'block', fontSize: 12, fontWeight: 500,
+  color: 'var(--color-neutral-600)', marginBottom: 4,
 };
 
 const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
+  width: '100%', padding: '8px 12px',
   border: '1px solid var(--color-neutral-200)',
-  borderRadius: 6,
-  fontSize: 13,
-  color: 'var(--color-neutral-800)',
-  background: 'white',
-  outline: 'none',
-  transition: 'border-color 0.15s',
+  borderRadius: 6, fontSize: 13,
+  color: 'var(--color-neutral-800)', background: 'white',
+  outline: 'none', transition: 'border-color 0.15s',
 };
 
 const selectStyle: React.CSSProperties = {

@@ -1,31 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, ExternalLink, CircleCheck as CheckCircle, Circle as XCircle, Circle as HelpCircle, Lightbulb } from 'lucide-react';
-import {
-  subscribe,
-  useStore,
-  getProfile,
-  getExpertiseArea,
-  getResponsesForRequest,
-  getCurrentUser,
-  respondToRequest,
-} from '../lib/store';
+import { useApp } from '../lib/context';
 import { StatusBadge, DecisionTypeBadge, ResponseTypeBadge } from '../components/StatusBadge';
-import type { ResponseType } from '../types';
+import type { ResponseType, RequestResponse, DecisionRequest } from '../types';
 
 export function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [, setRerender] = useState(0);
+  const { profile, myRequests, reviewRequests, getProfile, getExpertiseArea, getResponsesForRequest, respondToRequest } = useApp();
+
+  const [responses, setResponses] = useState<RequestResponse[]>([]);
+  const [loadingResponses, setLoadingResponses] = useState(true);
+
+  const request: DecisionRequest | undefined =
+    [...myRequests, ...reviewRequests].find((r) => r.id === id);
 
   useEffect(() => {
-    const unsub = subscribe(() => setRerender((n) => n + 1));
-    return unsub;
-  }, []);
+    if (!id) return;
+    setLoadingResponses(true);
+    getResponsesForRequest(id).then((rs) => {
+      setResponses(rs);
+      setLoadingResponses(false);
+    });
+  }, [id, getResponsesForRequest]);
 
-  const state = useStore();
-  const user = getCurrentUser();
-  const request = state.requests.find((r) => r.id === id);
+  if (!profile) return null;
 
   if (!request) {
     return (
@@ -39,11 +39,15 @@ export function RequestDetail() {
   const requester = getProfile(request.requester_id);
   const reviewer = getProfile(request.reviewer_id);
   const expertise = getExpertiseArea(request.expertise_area_id);
-  const responses = getResponsesForRequest(request.id);
-  const isReviewer = user.id === request.reviewer_id;
+  const isReviewer = profile.id === request.reviewer_id;
   const canRespond = isReviewer && ['pending', 'needs_info', 'in_review'].includes(request.status);
-
   const daysLeft = Math.ceil((new Date(request.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+  const handleRespond = async (responseType: ResponseType, comment: string) => {
+    await respondToRequest(request.id, profile.id, responseType, comment);
+    const rs = await getResponsesForRequest(request.id);
+    setResponses(rs);
+  };
 
   return (
     <div>
@@ -64,7 +68,6 @@ export function RequestDetail() {
         {expertise && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 10, background: 'var(--color-neutral-100)', color: 'var(--color-neutral-500)' }}>{expertise.name}</span>}
       </div>
 
-      {/* Meta row */}
       <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--color-neutral-400)', marginBottom: 16, flexWrap: 'wrap' }}>
         <span>From {requester?.full_name}</span>
         <span>to {reviewer?.full_name}</span>
@@ -74,7 +77,6 @@ export function RequestDetail() {
         </span>
       </div>
 
-      {/* Notion link */}
       {request.notion_link && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: 'var(--color-primary-50)', borderRadius: 6, marginBottom: 14, fontSize: 12 }}>
           <ExternalLink size={12} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
@@ -84,7 +86,6 @@ export function RequestDetail() {
         </div>
       )}
 
-      {/* Context */}
       <div style={{ marginBottom: 14 }}>
         <h3 style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-neutral-500)', marginBottom: 6 }}>
           {request.requester_type === 'developer' ? 'Proposed approach' : 'Context'}
@@ -94,7 +95,6 @@ export function RequestDetail() {
         </p>
       </div>
 
-      {/* Alternatives */}
       {request.alternatives_considered && (
         <div style={{ marginBottom: 14 }}>
           <h3 style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-neutral-500)', marginBottom: 6 }}>Alternatives</h3>
@@ -104,8 +104,7 @@ export function RequestDetail() {
         </div>
       )}
 
-      {/* Responses */}
-      {responses.length > 0 && (
+      {!loadingResponses && responses.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <h3 style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-neutral-500)', marginBottom: 8 }}>Responses</h3>
           {responses.map((resp) => {
@@ -124,16 +123,16 @@ export function RequestDetail() {
         </div>
       )}
 
-      {/* Response form */}
-      {canRespond && <ResponseForm requestId={request.id} />}
+      {canRespond && <ResponseForm onSubmit={handleRespond} />}
     </div>
   );
 }
 
-function ResponseForm({ requestId }: { requestId: string }) {
+function ResponseForm({ onSubmit }: { onSubmit: (type: ResponseType, comment: string) => Promise<void> }) {
   const [responseType, setResponseType] = useState<ResponseType>('approved');
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const options: { type: ResponseType; icon: React.ReactNode; label: string; color: string }[] = [
     { type: 'approved', icon: <CheckCircle size={13} />, label: 'Approve', color: 'var(--color-success-700)' },
@@ -142,17 +141,18 @@ function ResponseForm({ requestId }: { requestId: string }) {
     { type: 'rejected', icon: <XCircle size={13} />, label: 'Reject', color: 'var(--color-error-600)' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) return;
-    respondToRequest(requestId, responseType, comment.trim());
+    setSubmitting(true);
+    await onSubmit(responseType, comment.trim());
     setSubmitted(true);
   };
 
   if (submitted) {
     return (
       <div style={{ padding: 14, background: 'var(--color-success-50)', border: '1px solid var(--color-success-100)', borderRadius: 6, fontSize: 13, color: 'var(--color-success-700)' }}>
-        Response submitted. The requester has been notified.
+        Response submitted.
       </div>
     );
   }
@@ -169,18 +169,13 @@ function ResponseForm({ requestId }: { requestId: string }) {
               type="button"
               onClick={() => setResponseType(opt.type)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '4px 10px',
-                border: '1px solid',
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '4px 10px', border: '1px solid',
                 borderColor: responseType === opt.type ? opt.color : 'var(--color-neutral-200)',
                 borderRadius: 4,
                 background: responseType === opt.type ? `${opt.color}10` : 'white',
                 color: responseType === opt.type ? opt.color : 'var(--color-neutral-500)',
-                fontSize: 11,
-                fontWeight: responseType === opt.type ? 500 : 400,
-                cursor: 'pointer',
+                fontSize: 11, fontWeight: responseType === opt.type ? 500 : 400, cursor: 'pointer',
               }}
             >
               {opt.icon}
@@ -204,19 +199,16 @@ function ResponseForm({ requestId }: { requestId: string }) {
 
         <button
           type="submit"
-          disabled={!comment.trim()}
+          disabled={!comment.trim() || submitting}
           style={{
             padding: '6px 16px',
-            background: comment.trim() ? 'var(--color-primary-600)' : 'var(--color-neutral-200)',
-            color: comment.trim() ? 'white' : 'var(--color-neutral-400)',
-            border: 'none',
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 500,
-            cursor: comment.trim() ? 'pointer' : 'default',
+            background: comment.trim() && !submitting ? 'var(--color-primary-600)' : 'var(--color-neutral-200)',
+            color: comment.trim() && !submitting ? 'white' : 'var(--color-neutral-400)',
+            border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 500,
+            cursor: comment.trim() && !submitting ? 'pointer' : 'default',
           }}
         >
-          Submit
+          {submitting ? 'Submitting...' : 'Submit'}
         </button>
       </div>
     </form>
