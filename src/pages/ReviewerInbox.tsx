@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, CheckCircle, Clock } from 'lucide-react';
+import { Inbox, CircleCheck as CheckCircle, Clock } from 'lucide-react';
 import {
   getCurrentUser,
   subscribe,

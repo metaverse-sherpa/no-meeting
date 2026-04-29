@@ -1,15 +1,6 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import {
-  LayoutDashboard,
-  Send,
-  Inbox,
-  User,
-  BarChart3,
-  Coins,
-  Menu,
-  X,
-} from 'lucide-react';
+import { LayoutDashboard, Send, Inbox, User, ChartBar as BarChart3, Coins, Menu, X } from 'lucide-react';
 import { getCurrentUser, subscribe, useStore, getRequestsForReviewer, switchUser } from '../lib/store';
 
 export function Layout() {

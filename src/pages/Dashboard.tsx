@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Inbox, Clock, CheckCircle, Coins, TrendingUp } from 'lucide-react';
+import { Send, Inbox, Clock, CircleCheck as CheckCircle, Coins, TrendingUp } from 'lucide-react';
 import {
   getCurrentUser,
   subscribe,

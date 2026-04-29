@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Clock,
-  User as UserIcon,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  HelpCircle,
-  Lightbulb,
-} from 'lucide-react';
+import { ArrowLeft, Clock, User as UserIcon, MessageSquare, CircleCheck as CheckCircle, Circle as XCircle, Circle as HelpCircle, Lightbulb } from 'lucide-react';
 import {
   subscribe,
   useStore,

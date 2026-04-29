@@ -1,12 +1,5 @@
 import { useState, useEffect } from 'react';
-import {
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  Users,
-  Coins,
-  BarChart3,
-} from 'lucide-react';
+import { TrendingUp, Clock, CircleCheck as CheckCircle, Users, Coins, ChartBar as BarChart3 } from 'lucide-react';
 import {
   getCurrentUser,
   subscribe,
