@@ -9,9 +9,16 @@ import {
   createRequest,
 } from '../lib/store';
 import { isNotionUrl, extractNotionPage } from '../lib/notion-extract';
+import { calculateMeetingCost, formatMeetingCost, getMeetingComparisonMessage } from '../lib/meeting-calculator';
 import type { DecisionType, RequesterType } from '../types';
 
 type ExtractStatus = 'idle' | 'loading' | 'success' | 'error';
+
+interface MeetingCheck {
+  isOpen: boolean;
+  complexity: 'simple' | 'moderate' | 'complex' | null;
+  consideredMeeting: boolean | null;
+}
 
 export function NewRequest() {
   const [, setRerender] = useState(0);
@@ -41,6 +48,11 @@ export function NewRequest() {
   const [alternatives, setAlternatives] = useState('');
   const [deadline, setDeadline] = useState('');
   const [error, setError] = useState('');
+  const [meetingCheck, setMeetingCheck] = useState<MeetingCheck>({
+    isOpen: false,
+    complexity: null,
+    consideredMeeting: null,
+  });
 
   const reviewerExpertise = selectedReviewer ? getExpertiseForReviewer(selectedReviewer) : [];
   const selectedExpertiseArea = reviewerExpertise.find((e) => e.id === selectedExpertise);
@@ -94,10 +106,38 @@ export function NewRequest() {
     return () => clearTimeout(timer);
   }, [notionLink, handleExtractNotion]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
 
+    // Infer complexity from context length and decision type
+    const contextLength = context.length;
+    let complexity: 'simple' | 'moderate' | 'complex' = 'moderate';
+    if (contextLength < 200) complexity = 'simple';
+    if (contextLength > 500) complexity = 'complex';
+    if (decisionType === 'blocking_concern') complexity = 'complex';
+
+    setMeetingCheck({
+      isOpen: true,
+      complexity,
+      consideredMeeting: null,
+    });
+  };
+
+  const handleConfirmDecision = (consideredMeeting: boolean) => {
+    if (consideredMeeting) {
+      // User says they could do a meeting - show them the cost
+      setMeetingCheck({
+        ...meetingCheck,
+        consideredMeeting: true,
+      });
+    } else {
+      // User confirms async is right - submit
+      submitRequest();
+    }
+  };
+
+  const submitRequest = () => {
     try {
       const request = createRequest({
         requester_id: user.id,
@@ -149,7 +189,7 @@ export function NewRequest() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => { e.preventDefault(); }}>
         <div
           style={{
             background: 'white',
@@ -458,7 +498,8 @@ export function NewRequest() {
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handlePreSubmit}
               disabled={!canSubmit}
               style={{
                 display: 'flex',
@@ -481,15 +522,230 @@ export function NewRequest() {
         </div>
       </form>
 
+      {/* Meeting check modal */}
+      {meetingCheck.isOpen && (
+        <MeetingCheckModal
+          complexity={meetingCheck.complexity!}
+          consideredMeeting={meetingCheck.consideredMeeting}
+          onConfirm={handleConfirmDecision}
+          onBypass={submitRequest}
+        />
+      )}
+    </div>
+  );
+}
+
+function MeetingCheckModal({
+  complexity,
+  consideredMeeting,
+  onConfirm,
+  onBypass,
+}: {
+  complexity: 'simple' | 'moderate' | 'complex';
+  consideredMeeting: boolean | null;
+  onConfirm: (value: boolean) => void;
+  onBypass: () => void;
+}) {
+  const cost = calculateMeetingCost(complexity, 3);
+  const message = getMeetingComparisonMessage(cost);
+
+  if (consideredMeeting === true) {
+    // Show the cost comparison
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            background: 'white',
+            borderRadius: 'var(--radius-lg)',
+            padding: 32,
+            maxWidth: 500,
+            boxShadow: 'var(--shadow-lg)',
+          }}
+        >
+          <h2 style={{ marginBottom: 16, fontSize: 18 }}>Meeting vs. Async</h2>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
+            <div
+              style={{
+                background: 'var(--color-error-50)',
+                border: '1px solid var(--color-error-100)',
+                borderRadius: 'var(--radius-md)',
+                padding: 16,
+              }}
+            >
+              <div style={{ fontSize: 12, color: 'var(--color-error-600)', fontWeight: 500, marginBottom: 8 }}>
+                Sync Meeting Cost
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-error-700)', marginBottom: 4 }}>
+                {formatMeetingCost(cost)}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--color-error-600)', lineHeight: '140%' }}>
+                {cost.meetingMinutes}m meeting
+                <br />+{cost.prepTimePerAttendee}m prep/person
+                <br />+{cost.contextSwitchCost}m context switch
+                <br />
+                × {cost.attendeeCount} people
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'var(--color-success-50)',
+                border: '1px solid var(--color-success-100)',
+                borderRadius: 'var(--radius-md)',
+                padding: 16,
+              }}
+            >
+              <div style={{ fontSize: 12, color: 'var(--color-success-600)', fontWeight: 500, marginBottom: 8 }}>
+                Async Cost
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success-700)', marginBottom: 4 }}>
+                1 Token
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--color-success-600)', lineHeight: '140%' }}>
+                Your time to write
+                <br />+{cost.asyncAlternativeMinutes}m
+                <br />
+                <br />
+                No context switching
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: 'var(--color-primary-50)',
+              border: '1px solid var(--color-primary-100)',
+              borderRadius: 'var(--radius-md)',
+              padding: 12,
+              fontSize: 13,
+              color: 'var(--color-primary-700)',
+              marginBottom: 20,
+              lineHeight: '150%',
+            }}
+          >
+            {message}
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => onBypass()}
+              style={{
+                padding: '10px 20px',
+                background: 'var(--color-primary-600)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 14,
+                fontWeight: 500,
+              }}
+            >
+              Send Async Request (Go Ahead)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Initial question: could you do a meeting instead?
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 'var(--radius-lg)',
+          padding: 32,
+          maxWidth: 500,
+          boxShadow: 'var(--shadow-lg)',
+        }}
+      >
+        <h2 style={{ marginBottom: 12, fontSize: 18 }}>Before you send this...</h2>
+
+        <p style={{ fontSize: 14, color: 'var(--color-neutral-600)', marginBottom: 24, lineHeight: '160%' }}>
+          Could you solve this with a synchronous meeting instead? If yes, let's think through why async is still better.
+        </p>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => onConfirm(false)}
+            style={{
+              flex: 1,
+              padding: '12px 20px',
+              background: 'white',
+              border: '2px solid var(--color-primary-600)',
+              color: 'var(--color-primary-600)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            No, async is the right call
+          </button>
+          <button
+            onClick={() => onConfirm(true)}
+            style={{
+              flex: 1,
+              padding: '12px 20px',
+              background: 'var(--color-warning-50)',
+              border: '2px solid var(--color-warning-500)',
+              color: 'var(--color-warning-600)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Yes, a meeting would work
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
-  );
-}
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
