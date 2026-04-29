@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Clock, CircleCheck as CheckCircle, Users, Coins, ChartBar as BarChart3 } from 'lucide-react';
+import { Calendar, Clock, CircleCheck as CheckCircle, Coins } from 'lucide-react';
 import {
   getCurrentUser,
   subscribe,
@@ -23,329 +23,98 @@ export function Analytics() {
   const myRequests = getRequestsForRequester(user.id);
   const reviewRequests = getRequestsForReviewer(user.id);
 
-  // Calculate metrics
-  const approvedRequests = myRequests.filter((r) => r.status === 'approved');
-  const rejectedRequests = myRequests.filter((r) => r.status === 'rejected');
-  const resolvedRequests = myRequests.filter((r) => r.responded_at);
+  const approved = myRequests.filter((r) => r.status === 'approved').length;
+  const rejected = myRequests.filter((r) => r.status === 'rejected').length;
+  const resolved = myRequests.filter((r) => r.responded_at);
+  const meetingsSaved = resolved.length;
+  const totalResolved = approved + rejected;
+  const approvalRate = totalResolved > 0 ? Math.round((approved / totalResolved) * 100) : 0;
 
-  // Average response time (for resolved requests)
-  const responseTimes = resolvedRequests
+  const responseTimes = resolved
     .filter((r) => r.responded_at)
-    .map((r) => {
-      const created = new Date(r.created_at).getTime();
-      const responded = new Date(r.responded_at!).getTime();
-      return (responded - created) / (1000 * 60 * 60); // hours
-    });
-  const avgResponseHours = responseTimes.length > 0
-    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
-    : 0;
+    .map((r) => (new Date(r.responded_at!).getTime() - new Date(r.created_at).getTime()) / (1000 * 60 * 60));
+  const avgHours = responseTimes.length > 0 ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length : 0;
 
-  // Meetings saved estimate (each resolved request = 1 meeting avoided)
-  const meetingsSaved = resolvedRequests.length;
-
-  // Approval rate
-  const totalResolved = approvedRequests.length + rejectedRequests.length;
-  const approvalRate = totalResolved > 0
-    ? Math.round((approvedRequests.length / totalResolved) * 100)
-    : 0;
-
-  // Reviewer stats
   const reviewApproved = reviewRequests.filter((r) => r.status === 'approved').length;
   const reviewRejected = reviewRequests.filter((r) => r.status === 'rejected').length;
-  const reviewResolved = reviewApproved + reviewRejected;
-  const reviewPending = reviewRequests.filter((r) => r.status === 'pending').length;
 
-  // Token spending by reviewer
-  const spendingByReviewer: Record<string, { name: string; count: number }> = {};
+  // Spending by reviewer
+  const spending: Record<string, { name: string; count: number }> = {};
   myRequests.forEach((r) => {
-    const profile = getProfile(r.reviewer_id);
-    const name = profile?.full_name || 'Unknown';
-    if (!spendingByReviewer[r.reviewer_id]) {
-      spendingByReviewer[r.reviewer_id] = { name, count: 0 };
-    }
-    spendingByReviewer[r.reviewer_id].count += r.tokens_spent;
-  });
-
-  // Decision type breakdown
-  const decisionTypes: Record<string, number> = {};
-  myRequests.forEach((r) => {
-    decisionTypes[r.decision_type] = (decisionTypes[r.decision_type] || 0) + 1;
+    const p = getProfile(r.reviewer_id);
+    const name = p?.full_name || 'Unknown';
+    if (!spending[r.reviewer_id]) spending[r.reviewer_id] = { name, count: 0 };
+    spending[r.reviewer_id].count += r.tokens_spent;
   });
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <BarChart3 size={24} style={{ color: 'var(--color-primary-600)' }} />
-          Analytics
-        </h1>
-        <p style={{ color: 'var(--color-neutral-500)', fontSize: 14 }}>
-          Track how token-based decisions reduce meetings and improve flow.
-        </p>
-      </div>
+      <h1 style={{ fontSize: 20, marginBottom: 16 }}>Analytics</h1>
 
-      {/* Key metrics */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 16,
-          marginBottom: 32,
-        }}
-      >
+      {/* Key numbers */}
+      <div style={{ display: 'flex', gap: 20, marginBottom: 24, flexWrap: 'wrap' }}>
         {isRequester && (
           <>
-            <MetricCard
-              icon={<TrendingUp size={18} />}
-              value={meetingsSaved}
-              label="Meetings Saved"
-              sub="Each async decision = 1 meeting avoided"
-              accent="var(--color-accent-600)"
-              bg="var(--color-accent-50)"
-            />
-            <MetricCard
-              icon={<Clock size={18} />}
-              value={avgResponseHours > 24 ? `${(avgResponseHours / 24).toFixed(1)}d` : `${Math.round(avgResponseHours)}h`}
-              label="Avg Response Time"
-              sub="Time from request to decision"
-              accent="var(--color-primary-600)"
-              bg="var(--color-primary-50)"
-            />
-            <MetricCard
-              icon={<CheckCircle size={18} />}
-              value={`${approvalRate}%`}
-              label="Approval Rate"
-              sub={`${approvedRequests.length} approved, ${rejectedRequests.length} rejected`}
-              accent="var(--color-success-700)"
-              bg="var(--color-success-50)"
-            />
-            <MetricCard
-              icon={<Coins size={18} />}
-              value={`${user.tokens_used_this_week}`}
-              label="Tokens Used This Week"
-              sub={`${user.token_balance} remaining`}
-              accent="var(--color-warning-600)"
-              bg="var(--color-warning-50)"
-            />
+            <Metric value={meetingsSaved} label="meetings saved" icon={<Calendar size={13} />} />
+            <Metric value={avgHours > 24 ? `${(avgHours / 24).toFixed(1)}d` : `${Math.round(avgHours)}h`} label="avg response" icon={<Clock size={13} />} />
+            <Metric value={`${approvalRate}%`} label="approval rate" icon={<CheckCircle size={13} />} />
+            <Metric value={user.tokens_used_this_week} label="tokens used" icon={<Coins size={13} />} />
           </>
         )}
         {isReviewer && (
           <>
-            <MetricCard
-              icon={<CheckCircle size={18} />}
-              value={reviewResolved}
-              label="Decisions Made"
-              sub={`${reviewApproved} approved, ${reviewRejected} rejected`}
-              accent="var(--color-success-700)"
-              bg="var(--color-success-50)"
-            />
-            <MetricCard
-              icon={<Clock size={18} />}
-              value={reviewPending}
-              label="Pending Reviews"
-              sub="Awaiting your input"
-              accent="var(--color-warning-600)"
-              bg="var(--color-warning-50)"
-            />
+            <Metric value={reviewApproved + reviewRejected} label="decisions made" icon={<CheckCircle size={13} />} />
+            <Metric value={reviewRequests.filter((r) => r.status === 'pending').length} label="pending" icon={<Clock size={13} />} />
           </>
         )}
       </div>
 
-      {/* Spending breakdown */}
-      {isRequester && Object.keys(spendingByReviewer).length > 0 && (
-        <div
-          style={{
-            background: 'white',
-            border: '1px solid var(--color-neutral-200)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 24,
-            marginBottom: 24,
-          }}
-        >
-          <h2 style={{ fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Users size={18} style={{ color: 'var(--color-primary-600)' }} />
-            Token Spending by Reviewer
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {Object.values(spendingByReviewer)
-              .sort((a, b) => b.count - a.count)
-              .map((item) => {
-                const maxTokens = Math.max(...Object.values(spendingByReviewer).map((s) => s.count));
-                const pct = (item.count / maxTokens) * 100;
-                return (
-                  <div key={item.name}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-neutral-700)' }}>
-                        {item.name}
-                      </span>
-                      <span style={{ fontSize: 12, color: 'var(--color-neutral-500)' }}>
-                        {item.count} token{item.count !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        height: 8,
-                        background: 'var(--color-neutral-100)',
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: '100%',
-                          width: `${pct}%`,
-                          background: 'var(--color-primary-500)',
-                          borderRadius: 4,
-                          transition: 'width 0.3s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-      )}
-
-      {/* Decision type breakdown */}
-      {isRequester && Object.keys(decisionTypes).length > 0 && (
-        <div
-          style={{
-            background: 'white',
-            border: '1px solid var(--color-neutral-200)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 24,
-            marginBottom: 24,
-          }}
-        >
-          <h2 style={{ fontSize: 16, marginBottom: 16 }}>Decision Types</h2>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {Object.entries(decisionTypes).map(([type, count]) => {
-              const labels: Record<string, string> = {
-                approval: 'Approval',
-                sign_off: 'Sign-off',
-                feedback: 'Feedback',
-                blocking_concern: 'Blocking Concern',
-              };
-              const colors: Record<string, string> = {
-                approval: 'var(--color-primary-500)',
-                sign_off: 'var(--color-accent-500)',
-                feedback: 'var(--color-warning-500)',
-                blocking_concern: 'var(--color-error-500)',
-              };
+      {/* Spending */}
+      {isRequester && Object.keys(spending).length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <h2 style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-neutral-600)', marginBottom: 10 }}>Token spending</h2>
+          {Object.values(spending)
+            .sort((a, b) => b.count - a.count)
+            .map((item) => {
+              const max = Math.max(...Object.values(spending).map((s) => s.count));
               return (
-                <div
-                  key={type}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '10px 16px',
-                    background: 'var(--color-neutral-50)',
-                    border: '1px solid var(--color-neutral-200)',
-                    borderRadius: 'var(--radius-md)',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: '50%',
-                      background: colors[type] || 'var(--color-neutral-400)',
-                    }}
-                  />
-                  <span style={{ fontSize: 13, color: 'var(--color-neutral-700)' }}>{labels[type] || type}</span>
-                  <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-neutral-900)' }}>{count}</span>
+                <div key={item.name} style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 2 }}>
+                    <span style={{ color: 'var(--color-neutral-700)' }}>{item.name}</span>
+                    <span style={{ color: 'var(--color-neutral-400)' }}>{item.count}</span>
+                  </div>
+                  <div style={{ height: 4, background: 'var(--color-neutral-100)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${(item.count / max) * 100}%`, background: 'var(--color-primary-500)', borderRadius: 2 }} />
+                  </div>
                 </div>
               );
             })}
-          </div>
         </div>
       )}
 
-      {/* Impact summary */}
-      <div
-        style={{
-          background: 'var(--color-primary-50)',
-          border: '1px solid var(--color-primary-100)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 24,
-        }}
-      >
-        <h2 style={{ fontSize: 16, marginBottom: 12, color: 'var(--color-primary-800)' }}>
-          Impact Summary
-        </h2>
-        <div style={{ fontSize: 14, color: 'var(--color-primary-700)', lineHeight: '170%' }}>
-          {isRequester && (
-            <p>
-              You've made <strong>{myRequests.length}</strong> decision requests and saved an estimated{' '}
-              <strong>{meetingsSaved} meeting{meetingsSaved !== 1 ? 's' : ''}</strong> by using async tokens instead of scheduling sync time.
-              {avgResponseHours > 0 && (
-                <> Average response time is <strong>{avgResponseHours > 24 ? `${(avgResponseHours / 24).toFixed(1)} days` : `${Math.round(avgResponseHours)} hours`}</strong>, compared to the typical 3-7 day wait for a meeting slot.</>
-              )}
-            </p>
-          )}
-          {isReviewer && (
-            <p>
-              You've made <strong>{reviewResolved}</strong> decisions asynchronously, saving your team an estimated{' '}
-              <strong>{reviewResolved} meeting{reviewResolved !== 1 ? 's' : ''}</strong> worth of coordination overhead.
-              {reviewPending > 0 && (
-                <> You have <strong>{reviewPending}</strong> pending review{reviewPending !== 1 ? 's' : ''} in your inbox.</>
-              )}
-            </p>
-          )}
-        </div>
+      {/* Impact */}
+      <div style={{ background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-100)', borderRadius: 'var(--radius-md)', padding: 14, fontSize: 12, color: 'var(--color-primary-700)', lineHeight: '160%' }}>
+        {isRequester && (
+          <p>You've made {myRequests.length} requests and saved ~{meetingsSaved} meeting{meetingsSaved !== 1 ? 's' : ''} by going async.
+            {avgHours > 0 && ` Average response: ${avgHours > 24 ? `${(avgHours / 24).toFixed(1)} days` : `${Math.round(avgHours)} hours`} vs. 3-7 days to schedule a meeting.`}
+          </p>
+        )}
+        {isReviewer && (
+          <p>You've made {reviewApproved + reviewRejected} async decisions, saving your team ~{reviewApproved + reviewRejected} meeting{reviewApproved + reviewRejected !== 1 ? 's' : ''} of coordination.</p>
+        )}
       </div>
     </div>
   );
 }
 
-function MetricCard({
-  icon,
-  value,
-  label,
-  sub,
-  accent,
-  bg,
-}: {
-  icon: React.ReactNode;
-  value: string | number;
-  label: string;
-  sub?: string;
-  accent: string;
-  bg: string;
-}) {
+function Metric({ value, label, icon }: { value: string | number; label: string; icon: React.ReactNode }) {
   return (
-    <div
-      style={{
-        background: 'white',
-        border: '1px solid var(--color-neutral-200)',
-        borderRadius: 'var(--radius-lg)',
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 'var(--radius-md)',
-          background: bg,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: accent,
-          marginBottom: 12,
-        }}
-      >
-        {icon}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ color: 'var(--color-neutral-400)' }}>{icon}</div>
+      <div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-neutral-900)', lineHeight: 1 }}>{value}</div>
+        <div style={{ fontSize: 11, color: 'var(--color-neutral-400)' }}>{label}</div>
       </div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-neutral-900)', lineHeight: 1 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-neutral-700)', marginTop: 4 }}>{label}</div>
-      {sub && (
-        <div style={{ fontSize: 11, color: 'var(--color-neutral-400)', marginTop: 2 }}>{sub}</div>
-      )}
     </div>
   );
 }

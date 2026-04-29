@@ -39,6 +39,7 @@ export interface DecisionRequest {
   context: string;
   alternatives_considered: string;
   deadline: string;
+  notion_link?: string;
   status: RequestStatus;
   tokens_spent: number;
   responded_at?: string;

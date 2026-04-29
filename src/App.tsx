@@ -6,6 +6,7 @@ import { RequestDetail } from './pages/RequestDetail';
 import { ReviewerInbox } from './pages/ReviewerInbox';
 import { Profile } from './pages/Profile';
 import { Analytics } from './pages/Analytics';
+import { MeetingInterrupt } from './pages/MeetingInterrupt';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/request/new" element={<NewRequest />} />
           <Route path="/request/:id" element={<RequestDetail />} />
           <Route path="/inbox" element={<ReviewerInbox />} />
+          <Route path="/interrupt" element={<MeetingInterrupt />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="*" element={<Navigate to="/" replace />} />
