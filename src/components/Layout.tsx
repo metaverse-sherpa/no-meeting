@@ -1,15 +1,21 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Coins, Menu, X, LogOut } from 'lucide-react';
+import { Coins, Menu, X, LogOut, LayoutDashboard, Inbox, Zap, ChartBar as BarChart2, Settings } from 'lucide-react';
 import { useApp } from '../lib/context';
 
+const ROLE_LABEL: Record<string, string> = {
+  requester: 'Requester',
+  reviewer: 'Reviewer',
+  both: 'Requester & Reviewer',
+};
+
 export function Layout() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { profile, profiles, reviewRequests, switchUser } = useApp();
 
   useEffect(() => {
-    setMobileMenuOpen(false);
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   if (!profile) return <Outlet />;
@@ -18,72 +24,62 @@ export function Layout() {
   const isRequester = profile.role === 'requester' || profile.role === 'both';
 
   const navItems = [
-    { to: '/', label: 'Requests' },
-    { to: '/inbox', label: 'Inbox', badge: pendingForReview },
-    { to: '/interrupt', label: 'Meeting Check' },
-    { to: '/analytics', label: 'Analytics' },
-    { to: '/profile', label: 'Settings' },
+    { to: '/', label: 'Requests', icon: LayoutDashboard },
+    { to: '/inbox', label: 'Inbox', icon: Inbox, badge: pendingForReview },
+    { to: '/interrupt', label: 'Meeting Check', icon: Zap },
+    { to: '/analytics', label: 'Analytics', icon: BarChart2 },
+    { to: '/profile', label: 'Settings', icon: Settings },
   ];
+
+  const initials = profile.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Top bar */}
       <header style={{
         height: 48,
         borderBottom: '1px solid var(--color-neutral-200)',
         background: 'white',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 20px',
-        gap: 16,
+        padding: '0 16px',
+        gap: 12,
         position: 'sticky',
         top: 0,
         zIndex: 50,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 8 }}>
-          <Coins size={16} style={{ color: 'var(--color-primary-600)' }} />
+        {/* Sidebar toggle */}
+        <button
+          onClick={() => setSidebarOpen((v) => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 28, height: 28,
+            background: 'none', border: 'none', padding: 0,
+            color: 'var(--color-neutral-500)', cursor: 'pointer',
+            borderRadius: 6, transition: 'background 0.1s, color 0.1s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--color-neutral-100)';
+            e.currentTarget.style.color = 'var(--color-neutral-700)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'none';
+            e.currentTarget.style.color = 'var(--color-neutral-500)';
+          }}
+          aria-label="Toggle sidebar"
+        >
+          <Menu size={16} />
+        </button>
+
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Coins size={15} style={{ color: 'var(--color-primary-600)' }} />
           <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-neutral-900)' }}>TokenFlow</span>
         </div>
 
-        <nav style={{ display: 'flex', gap: 2 }} className="desktop-nav">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              style={({ isActive }) => ({
-                padding: '4px 12px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: isActive ? 500 : 400,
-                color: isActive ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
-                background: isActive ? 'var(--color-primary-50)' : 'transparent',
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'background 0.1s',
-              })}
-            >
-              {item.label}
-              {item.badge ? (
-                <span style={{
-                  background: 'var(--color-error-500)',
-                  color: 'white',
-                  fontSize: 10,
-                  fontWeight: 600,
-                  padding: '0 5px',
-                  borderRadius: 8,
-                  lineHeight: '16px',
-                }}>
-                  {item.badge}
-                </span>
-              ) : null}
-            </NavLink>
-          ))}
-        </nav>
-
         <div style={{ flex: 1 }} />
 
+        {/* Token balance */}
         {isRequester && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 4,
@@ -111,12 +107,11 @@ export function Layout() {
             cursor: 'pointer',
           }}
         >
-          {profiles.map((p) => {
-            const roleLabel = p.role === 'both' ? 'Requester & Reviewer' : p.role.charAt(0).toUpperCase() + p.role.slice(1);
-            return (
-              <option key={p.id} value={p.id}>{p.full_name} — {roleLabel}</option>
-            );
-          })}
+          {profiles.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.full_name} — {ROLE_LABEL[p.role] ?? p.role}
+            </option>
+          ))}
         </select>
 
         {/* Logout */}
@@ -124,67 +119,165 @@ export function Layout() {
           onClick={() => switchUser(null)}
           title="Back to user list"
           style={{
-            display: 'flex', alignItems: 'center', gap: 4,
+            display: 'flex', alignItems: 'center',
             background: 'none', border: 'none', padding: '3px 6px',
             color: 'var(--color-neutral-400)', cursor: 'pointer',
-            borderRadius: 4, fontSize: 11,
-            transition: 'color 0.15s',
+            borderRadius: 4, transition: 'color 0.15s',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-neutral-700)')}
           onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-neutral-400)')}
         >
           <LogOut size={13} />
         </button>
-
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          style={{ display: 'none', background: 'none', border: 'none', padding: 4, color: 'var(--color-neutral-600)', cursor: 'pointer' }}
-          className="mobile-menu-btn"
-        >
-          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
       </header>
 
-      {mobileMenuOpen && (
-        <div style={{
+      <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
+        {/* Sidebar overlay (mobile) */}
+        {sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, top: 48,
+              background: 'rgba(0,0,0,0.25)',
+              zIndex: 40,
+            }}
+          />
+        )}
+
+        {/* Sidebar panel */}
+        <aside style={{
+          position: 'fixed',
+          top: 48,
+          left: 0,
+          bottom: 0,
+          width: 224,
           background: 'white',
-          borderBottom: '1px solid var(--color-neutral-200)',
-          padding: '8px 20px',
-          display: 'flex', gap: 4, flexWrap: 'wrap',
-        }} className="mobile-nav">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              style={({ isActive }) => ({
-                padding: '6px 12px', borderRadius: 6, fontSize: 12,
-                fontWeight: isActive ? 500 : 400,
-                color: isActive ? 'var(--color-primary-700)' : 'var(--color-neutral-500)',
-                background: isActive ? 'var(--color-primary-50)' : 'transparent',
-                textDecoration: 'none',
-              })}
+          borderRight: '1px solid var(--color-neutral-200)',
+          zIndex: 45,
+          display: 'flex',
+          flexDirection: 'column',
+          transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: sidebarOpen ? '4px 0 16px rgba(0,0,0,0.06)' : 'none',
+        }}>
+          {/* User card */}
+          <div style={{
+            padding: '16px 16px 12px',
+            borderBottom: '1px solid var(--color-neutral-100)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '50%',
+                background: 'var(--color-primary-100)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 600, color: 'var(--color-primary-700)',
+                flexShrink: 0,
+              }}>
+                {initials}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-neutral-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {profile.full_name}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--color-neutral-400)' }}>
+                  {ROLE_LABEL[profile.role] ?? profile.role}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Nav items */}
+          <nav style={{ flex: 1, padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  style={({ isActive }) => ({
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '8px 10px',
+                    borderRadius: 7,
+                    fontSize: 13,
+                    fontWeight: isActive ? 500 : 400,
+                    color: isActive ? 'var(--color-primary-700)' : 'var(--color-neutral-600)',
+                    background: isActive ? 'var(--color-primary-50)' : 'transparent',
+                    textDecoration: 'none',
+                    transition: 'background 0.1s, color 0.1s',
+                  })}
+                  onMouseEnter={(e) => {
+                    const a = e.currentTarget;
+                    if (!a.getAttribute('aria-current')) {
+                      a.style.background = 'var(--color-neutral-50)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    const a = e.currentTarget;
+                    if (!a.getAttribute('aria-current')) {
+                      a.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  <Icon size={15} style={{ flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {item.badge ? (
+                    <span style={{
+                      background: 'var(--color-error-500)',
+                      color: 'white',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      padding: '0 5px',
+                      borderRadius: 8,
+                      lineHeight: '16px',
+                    }}>
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          {/* Close button at bottom */}
+          <div style={{ padding: '8px 8px 12px', borderTop: '1px solid var(--color-neutral-100)' }}>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', padding: '8px 10px',
+                background: 'none', border: 'none', borderRadius: 7,
+                fontSize: 13, color: 'var(--color-neutral-400)',
+                cursor: 'pointer', transition: 'background 0.1s, color 0.1s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--color-neutral-50)';
+                e.currentTarget.style.color = 'var(--color-neutral-600)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none';
+                e.currentTarget.style.color = 'var(--color-neutral-400)';
+              }}
             >
-              {item.label}{item.badge ? ` (${item.badge})` : ''}
-            </NavLink>
-          ))}
-        </div>
-      )}
+              <X size={15} />
+              Close
+            </button>
+          </div>
+        </aside>
 
-      <main style={{ flex: 1, padding: '24px 24px', maxWidth: 680, width: '100%', margin: '0 auto' }}>
-        <Outlet />
-      </main>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .mobile-menu-btn { display: block !important; }
-        }
-        @media (min-width: 769px) {
-          .mobile-nav { display: none !important; }
-          .mobile-menu-btn { display: none !important; }
-        }
-      `}</style>
+        {/* Main content */}
+        <main style={{
+          flex: 1,
+          padding: '24px',
+          maxWidth: 680,
+          width: '100%',
+          margin: '0 auto',
+        }}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
