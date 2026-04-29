@@ -1,5 +1,5 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { Outlet, NavLink } from 'react-router-dom';
+import { useState } from 'react';
 import { Coins, Menu, X, LogOut, LayoutDashboard, Inbox, Zap, ChartBar as BarChart2, Settings } from 'lucide-react';
 import { useApp } from '../lib/context';
 
@@ -10,13 +10,8 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const { profile, profiles, reviewRequests, switchUser } = useApp();
-
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [location.pathname]);
 
   if (!profile) return <Outlet />;
 
@@ -132,18 +127,6 @@ export function Layout() {
       </header>
 
       <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
-        {/* Sidebar overlay (mobile) */}
-        {sidebarOpen && (
-          <div
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, top: 48,
-              background: 'rgba(0,0,0,0.25)',
-              zIndex: 40,
-            }}
-          />
-        )}
-
         {/* Sidebar panel */}
         <aside style={{
           position: 'fixed',
@@ -274,6 +257,8 @@ export function Layout() {
           maxWidth: 680,
           width: '100%',
           margin: '0 auto',
+          marginLeft: sidebarOpen ? 224 : 0,
+          transition: 'margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}>
           <Outlet />
         </main>
