@@ -77,12 +77,12 @@ export function Analytics() {
 
       <div style={{ background: 'var(--color-primary-50)', border: '1px solid var(--color-primary-100)', borderRadius: 'var(--radius-md)', padding: 14, fontSize: 12, color: 'var(--color-primary-700)', lineHeight: '160%' }}>
         {isRequester && (
-          <p>You've made {myRequests.length} requests and saved ~{meetingsSaved} meeting{meetingsSaved !== 1 ? 's' : ''} by going async.
+          <p>You've made {myRequests.length} requests and saved ~{meetingsSaved} meeting{meetingsSaved !== 1 ? 's' : ''} by using CRUX.
             {avgHours > 0 && ` Average response: ${avgHours > 24 ? `${(avgHours / 24).toFixed(1)} days` : `${Math.round(avgHours)} hours`} vs. 3-7 days to schedule a meeting.`}
           </p>
         )}
         {isReviewer && (
-          <p>You've made {reviewApproved + reviewRejected} async decisions, saving your team ~{reviewApproved + reviewRejected} meeting{reviewApproved + reviewRejected !== 1 ? 's' : ''} of coordination.</p>
+          <p>You've made {reviewApproved + reviewRejected} CRUX decisions, saving your team ~{reviewApproved + reviewRejected} meeting{reviewApproved + reviewRejected !== 1 ? 's' : ''} of coordination.</p>
         )}
       </div>
     </div>

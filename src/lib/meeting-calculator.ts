@@ -69,5 +69,5 @@ export function getMeetingComparisonMessage(cost: MeetingCost): string {
   const saved = cost.totalMinutesPerPerson - cost.asyncAlternativeMinutes;
   const savedPct = Math.round((saved / cost.totalMinutesPerPerson) * 100);
 
-  return `A ${cost.meetingMinutes}-minute meeting with ${cost.attendeeCount} people costs ${formatMeetingCost(cost)} of focused time. By going async, you'll save about ${savedPct}% of that time for everyone involved.`;
+  return `A ${cost.meetingMinutes}-minute meeting with ${cost.attendeeCount} people costs ${formatMeetingCost(cost)} of focused time. By using CRUX, you'll save about ${savedPct}% of that time for everyone involved.`;
 }

@@ -298,7 +298,7 @@ export function NewRequest() {
             onClick={() => setShowMeetingCheck(true)}
             style={{ background: 'none', border: 'none', color: 'var(--color-primary-600)', fontSize: 12, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline' }}
           >
-            Why async?
+            Why CRUX?
           </button>
         </div>
       )}
@@ -311,7 +311,7 @@ export function NewRequest() {
           fontSize: 12, color: 'var(--color-primary-700)', lineHeight: '150%',
         }}>
           A {meetingCost.meetingMinutes}m meeting with {meetingCost.attendeeCount} people = {formatMeetingCost(meetingCost)} of focused time (including prep + context switching).
-          This async request costs 1 token and {meetingCost.asyncAlternativeMinutes}m of your time. No interruptions for anyone else.
+          This CRUX request costs 1 token and {meetingCost.asyncAlternativeMinutes}m of your time. No interruptions for anyone else.
           <button
             type="button"
             onClick={() => setShowMeetingCheck(false)}

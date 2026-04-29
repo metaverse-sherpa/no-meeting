@@ -36,7 +36,7 @@ export function MeetingInterrupt() {
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 20, marginBottom: 4 }}>About to book a meeting?</h1>
           <p style={{ color: 'var(--color-neutral-500)', fontSize: 13 }}>
-            Before you send that calendar invite, check if an async decision would work instead.
+            Before you send that calendar invite, check if a CRUX decision would work instead.
           </p>
         </div>
 
@@ -158,8 +158,8 @@ export function MeetingInterrupt() {
               lineHeight: '150%',
             }}
           >
-            If your meeting is about getting a decision, you can probably do it async.
-            CRUX lets you spend a token to get an async response instead.
+            If your meeting is about getting a decision, you can probably do it with CRUX.
+            CRUX lets you spend a token to get a crux response instead.
           </div>
         </div>
       </div>
@@ -268,13 +268,13 @@ export function MeetingInterrupt() {
               }}
             >
               <div style={{ fontSize: 11, color: 'var(--color-success-600)', fontWeight: 500, marginBottom: 6 }}>
-                Async costs
+                CRUX costs
               </div>
               <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--color-success-700)', marginBottom: 4 }}>
                 1 Token
               </div>
               <div style={{ fontSize: 10, color: 'var(--color-success-600)', lineHeight: '150%' }}>
-                {cost.asyncAlternativeMinutes}m to write your context. No interruptions for anyone else.
+                {cost.asyncAlternativeMinutes}m to write your context. No interruptions for anyone else. Use CRUX.
               </div>
             </div>
           </div>
@@ -295,7 +295,7 @@ export function MeetingInterrupt() {
             }}
           >
             <Zap size={14} />
-            You'd save {Math.round(((cost.totalMinutesPerPerson - cost.asyncAlternativeMinutes) / cost.totalMinutesPerPerson) * 100)}% of everyone's time by going async
+            You'd save {Math.round(((cost.totalMinutesPerPerson - cost.asyncAlternativeMinutes) / cost.totalMinutesPerPerson) * 100)}% of everyone's time by using CRUX
           </div>
 
           {/* Actions */}
@@ -322,7 +322,7 @@ export function MeetingInterrupt() {
               onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--color-primary-600)')}
             >
               <Coins size={14} />
-              Send Async Request Instead
+              Send CRUX Request Instead
             </button>
             <button
               onClick={() => setStep('question')}

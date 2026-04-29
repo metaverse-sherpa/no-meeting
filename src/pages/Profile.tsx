@@ -205,7 +205,7 @@ export function Profile() {
             <div style={{ marginTop: 10, borderTop: '1px solid var(--color-neutral-100)', paddingTop: 10 }}>
               <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-neutral-500)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Zap size={10} style={{ color: 'var(--color-warning-500)' }} />
-                {activeMeetings.length} meeting{activeMeetings.length !== 1 ? 's' : ''} detected — async opportunity
+                {activeMeetings.length} meeting{activeMeetings.length !== 1 ? 's' : ''} detected — CRUX opportunity
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {activeMeetings.slice(0, 3).map((m) => (
@@ -268,7 +268,7 @@ export function Profile() {
         {calendarConnected && (
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--color-neutral-400)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <CheckCircle2 size={10} style={{ color: 'var(--color-success-500)' }} />
-            CRUX monitors new calendar events and flags meetings that could be async decisions.
+            CRUX monitors new calendar events and flags meetings that could be CRUX decisions.
           </div>
         )}
         {!calendarConnected && (

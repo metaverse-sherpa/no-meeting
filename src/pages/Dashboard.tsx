@@ -56,7 +56,7 @@ export function Dashboard() {
             fontSize: 12, fontWeight: 500, color: 'var(--color-warning-600)',
           }}>
             <Zap size={13} />
-            {activeMeetings.length} calendar meeting{activeMeetings.length !== 1 ? 's' : ''} could be async
+            {activeMeetings.length} calendar meeting{activeMeetings.length !== 1 ? 's' : ''} could be a CRUX request
             <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--color-neutral-400)', marginLeft: 4 }}>
               · detected via Google Calendar
             </span>
@@ -95,7 +95,7 @@ export function Dashboard() {
                       fontSize: 11, fontWeight: 500, cursor: 'pointer',
                     }}
                   >
-                    Convert to async
+                    Convert to CRUX
                     <ArrowRight size={10} />
                   </button>
                   <button
@@ -209,7 +209,7 @@ export function Dashboard() {
               border: '1px dashed var(--color-neutral-300)',
               borderRadius: 'var(--radius-md)', fontSize: 13,
             }}>
-              No requests yet. Spend a token to get an async decision.
+              No requests yet. Spend a token to get a CRUX decision.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
