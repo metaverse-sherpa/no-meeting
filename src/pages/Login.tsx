@@ -34,11 +34,11 @@ export function MockLogin() {
           }}>
             <Coins size={18} color="white" />
           </div>
-          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)' }}>TokenFlow</span>
+          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-neutral-900)' }}>BTM</span>
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--color-neutral-500)', marginBottom: 28 }}>
-          Replace synchronous meetings with async decisions
+          get productive
         </p>
 
         <div style={{

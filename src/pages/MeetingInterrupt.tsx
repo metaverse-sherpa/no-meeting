@@ -159,7 +159,7 @@ export function MeetingInterrupt() {
             }}
           >
             If your meeting is about getting a decision, you can probably do it async.
-            TokenFlow lets you spend a token to get an async response instead.
+            BTM lets you spend a token to get an async response instead.
           </div>
         </div>
       </div>

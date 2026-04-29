@@ -69,7 +69,8 @@ export function Layout() {
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Coins size={15} style={{ color: 'var(--color-primary-600)' }} />
-          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-neutral-900)' }}>TokenFlow</span>
+          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-neutral-900)' }}>BTM</span>
+          <span style={{ fontSize: 11, color: 'var(--color-neutral-400)', fontWeight: 400 }}>get productive</span>
         </div>
 
         <div style={{ flex: 1 }} />
