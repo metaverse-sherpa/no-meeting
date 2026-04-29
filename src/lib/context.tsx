@@ -30,7 +30,7 @@ interface AppState {
 }
 
 interface AppActions {
-  switchUser: (id: string) => void;
+  switchUser: (id: string | null) => void;
   refreshAll: () => Promise<void>;
   createRequest: (req: {
     reviewer_id: string;
@@ -96,8 +96,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadData(currentUserId).finally(() => setLoading(false));
   }, [currentUserId, loadData]);
 
-  const switchUser = useCallback((id: string) => {
-    localStorage.setItem(CURRENT_USER_KEY, id);
+  const switchUser = useCallback((id: string | null) => {
+    if (id) {
+      localStorage.setItem(CURRENT_USER_KEY, id);
+    } else {
+      localStorage.removeItem(CURRENT_USER_KEY);
+    }
     setCurrentUserId(id);
   }, []);
 

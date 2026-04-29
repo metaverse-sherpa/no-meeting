@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Coins, Menu, X } from 'lucide-react';
+import { Coins, Menu, X, LogOut } from 'lucide-react';
 import { useApp } from '../lib/context';
 
 export function Layout() {
@@ -111,10 +111,30 @@ export function Layout() {
             cursor: 'pointer',
           }}
         >
-          {profiles.map((p) => (
-            <option key={p.id} value={p.id}>{p.full_name}</option>
-          ))}
+          {profiles.map((p) => {
+            const roleLabel = p.role === 'both' ? 'Requester & Reviewer' : p.role.charAt(0).toUpperCase() + p.role.slice(1);
+            return (
+              <option key={p.id} value={p.id}>{p.full_name} — {roleLabel}</option>
+            );
+          })}
         </select>
+
+        {/* Logout */}
+        <button
+          onClick={() => switchUser(null)}
+          title="Back to user list"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: 'none', border: 'none', padding: '3px 6px',
+            color: 'var(--color-neutral-400)', cursor: 'pointer',
+            borderRadius: 4, fontSize: 11,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-neutral-700)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-neutral-400)')}
+        >
+          <LogOut size={13} />
+        </button>
 
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
