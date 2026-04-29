@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Coins, ArrowRight, Calendar, Zap } from 'lucide-react';
+import { Coins, ArrowRight, Calendar, Zap, ArrowLeft } from 'lucide-react';
 import { calculateMeetingCost, formatMeetingCost } from '../lib/meeting-calculator';
 
 type Step = 'question' | 'cost' | 'redirect';
@@ -19,6 +19,20 @@ export function MeetingInterrupt() {
   if (step === 'question') {
     return (
       <div>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: 'none', border: 'none', padding: '0 0 16px',
+            color: 'var(--color-neutral-400)', cursor: 'pointer',
+            fontSize: 13, transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-neutral-700)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-neutral-400)')}
+        >
+          <ArrowLeft size={14} /> Back
+        </button>
+
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 20, marginBottom: 4 }}>About to book a meeting?</h1>
           <p style={{ color: 'var(--color-neutral-500)', fontSize: 13 }}>
