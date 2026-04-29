@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, User as UserIcon, MessageSquare, CircleCheck as CheckCircle, Circle as XCircle, Circle as HelpCircle, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Clock, User as UserIcon, MessageSquare, CircleCheck as CheckCircle, Circle as XCircle, Circle as HelpCircle, Lightbulb, ExternalLink } from 'lucide-react';
 import {
   subscribe,
   useStore,
@@ -138,6 +138,42 @@ export function RequestDetail() {
           value={new Date(request.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         />
       </div>
+
+      {/* Notion link */}
+      {request.notion_link && (
+        <div
+          style={{
+            background: 'var(--color-primary-50)',
+            border: '1px solid var(--color-primary-100)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '14px 20px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <ExternalLink size={16} style={{ color: 'var(--color-primary-600)', flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: 'var(--color-primary-600)', fontWeight: 500, marginBottom: 2 }}>
+              Notion Document
+            </div>
+            <a
+              href={request.notion_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: 13,
+                color: 'var(--color-primary-600)',
+                wordBreak: 'break-all',
+                textDecoration: 'none',
+              }}
+            >
+              {request.notion_link}
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Context */}
       <div

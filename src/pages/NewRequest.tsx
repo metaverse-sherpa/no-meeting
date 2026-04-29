@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Coins } from 'lucide-react';
+import { Send, Coins, Link, Loader as Loader2, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react';
 import {
   getCurrentUser,
   subscribe,
@@ -8,7 +8,10 @@ import {
   getExpertiseForReviewer,
   createRequest,
 } from '../lib/store';
+import { isNotionUrl, extractNotionPage } from '../lib/notion-extract';
 import type { DecisionType, RequesterType } from '../types';
+
+type ExtractStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export function NewRequest() {
   const [, setRerender] = useState(0);
@@ -22,6 +25,9 @@ export function NewRequest() {
   const user = getCurrentUser();
   const reviewers = getReviewers();
 
+  const [notionLink, setNotionLink] = useState('');
+  const [extractStatus, setExtractStatus] = useState<ExtractStatus>('idle');
+  const [extractError, setExtractError] = useState('');
   const [title, setTitle] = useState('');
   const [decisionType, setDecisionType] = useState<DecisionType>('approval');
   const [requesterType, setRequesterType] = useState<RequesterType>(
@@ -47,6 +53,47 @@ export function NewRequest() {
     deadline &&
     user.token_balance > 0;
 
+  const handleExtractNotion = useCallback(async (url: string) => {
+    if (!isNotionUrl(url)) {
+      setExtractStatus('idle');
+      return;
+    }
+
+    setExtractStatus('loading');
+    setExtractError('');
+
+    try {
+      const result = await extractNotionPage(url);
+
+      if (result.title) setTitle(result.title);
+      if (result.content) setContext(result.content);
+      if (result.alternatives) setAlternatives(result.alternatives);
+      if (result.decisionType) setDecisionType(result.decisionType as DecisionType);
+      if (result.deadline) setDeadline(result.deadline);
+
+      setExtractStatus('success');
+    } catch (err) {
+      setExtractStatus('error');
+      setExtractError(
+        'Could not extract content from this Notion page. It may be private or require login. You can still paste the link and fill in the form manually.'
+      );
+    }
+  }, []);
+
+  // Debounced extraction on link change
+  useEffect(() => {
+    if (!notionLink.trim()) {
+      setExtractStatus('idle');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      handleExtractNotion(notionLink.trim());
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [notionLink, handleExtractNotion]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -62,6 +109,7 @@ export function NewRequest() {
         context: context.trim(),
         alternatives_considered: alternatives.trim(),
         deadline,
+        notion_link: notionLink.trim() || undefined,
       });
       navigate(`/request/${request.id}`);
     } catch (err) {
@@ -127,6 +175,74 @@ export function NewRequest() {
           >
             <Coins size={16} />
             This request will cost 1 token (balance: {user.token_balance})
+          </div>
+
+          {/* Notion link */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={labelStyle}>
+              <Link size={13} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+              Notion link <span style={{ fontWeight: 400, color: 'var(--color-neutral-400)' }}>(optional - auto-fills form)</span>
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="url"
+                value={notionLink}
+                onChange={(e) => setNotionLink(e.target.value)}
+                placeholder="https://www.notion.so/your-team/decision-doc-..."
+                style={{
+                  ...inputStyle,
+                  paddingRight: 40,
+                  borderColor:
+                    extractStatus === 'success'
+                      ? 'var(--color-success-500)'
+                      : extractStatus === 'error'
+                      ? 'var(--color-error-500)'
+                      : undefined,
+                }}
+              />
+              {extractStatus === 'loading' && (
+                <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}>
+                  <Loader2 size={16} style={{ color: 'var(--color-primary-500)', animation: 'spin 1s linear infinite' }} />
+                </div>
+              )}
+              {extractStatus === 'success' && (
+                <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}>
+                  <CheckCircle size={16} style={{ color: 'var(--color-success-500)' }} />
+                </div>
+              )}
+              {extractStatus === 'error' && (
+                <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}>
+                  <AlertCircle size={16} style={{ color: 'var(--color-error-500)' }} />
+                </div>
+              )}
+            </div>
+            {extractStatus === 'success' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  marginTop: 6,
+                  fontSize: 12,
+                  color: 'var(--color-success-700)',
+                }}
+              >
+                <CheckCircle size={12} />
+                Extracted title, context, and alternatives from Notion page
+              </div>
+            )}
+            {extractStatus === 'error' && extractError && (
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 12,
+                  color: 'var(--color-error-600)',
+                  lineHeight: '150%',
+                }}
+              >
+                {extractError}
+              </div>
+            )}
           </div>
 
           {/* Requester type */}
@@ -364,6 +480,13 @@ export function NewRequest() {
           </div>
         </div>
       </form>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
